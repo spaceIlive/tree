@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>LLM Study Copilot — Concept Deck</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
+    background: #0e0e12;
+    color: #e8e8ee;
+    overflow: hidden;
+    height: 100vh;
+  }
+  .deck { position: relative; width: 100vw; height: 100vh; }
+  .slide {
+    position: absolute; inset: 0;
+    padding: 64px 80px;
+    display: none;
+    flex-direction: column;
+    animation: fadeIn 0.4s ease;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #2a2a35;
+    border-radius: 999px;
+    font-size: 12px;
+    color: #9a9ab0;
+    margin-bottom: 20px;
+    letter-spacing: 0.5px;
+  }
+  h1 { font-size: 48px; font-weight: 700; margin-bottom: 20px; letter-spacing: -1px; }
+  h2 { font-size: 32px; font-weight: 600; margin-bottom: 16px; letter-spacing: -0.5px; }
+  h3 { font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #c9c9dd; }
+  p, li { font-size: 18px; line-height: 1.7; color: #b8b8c8; }
+  .lead { font-size: 22px; color: #d8d8e8; margin-bottom: 32px; }
+  strong { color: #fff; }
+  .accent { color: #7c9cff; }
+  .warn { color: #ff8c7c; }
+  .good { color: #7cffa8; }
+
+  /* Nav */
+  .nav {
+    position: fixed; bottom: 24px; right: 32px;
+    display: flex; align-items: center; gap: 16px;
+    color: #6a6a80; font-size: 13px;
+    z-index: 100;
+  }
+  .nav button {
+    background: #22222c; color: #b8b8c8; border: none;
+    padding: 8px 12px; border-radius: 6px; cursor: pointer;
+    font-size: 13px;
+  }
+  .nav button:hover { background: #2c2c38; }
+
+  /* Two column layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 16px; }
+
+  /* Mockup styles */
+  .mockup {
+    background: #16161d;
+    border: 1px solid #2c2c38;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    height: 100%;
+    min-height: 480px;
+  }
+  .mockup-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px; background: #1a1a22; border-bottom: 1px solid #2c2c38;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #3a3a48; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+
+  /* Chat pane */
+  .chat-pane {
+    flex: 1; display: flex; flex-direction: column;
+    border-right: 1px solid #2c2c38;
+    min-width: 0;
+  }
+  .chat-body { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  .msg {
+    padding: 10px 14px; border-radius: 10px; max-width: 92%;
+    font-size: 13.5px; line-height: 1.6;
+  }
+  .msg.user { background: #2a3d6b; align-self: flex-end; color: #fff; max-width: 75%; }
+  .msg.ai { background: #22222c; align-self: flex-start; color: #dcdce8; }
+  .msg.ancestor { opacity: 0.55; }
+  .msg.branch-alert {
+    align-self: center; background: #1e2a1e; color: #7cffa8;
+    border: 1px dashed #3a5a3a; font-size: 12px; padding: 8px 12px;
+    max-width: 100%;
+  }
+  .msg.suggest {
+    align-self: center; background: #2a2438; color: #c9b8ff;
+    border: 1px dashed #5a4a8a; font-size: 12px; padding: 10px 14px;
+    max-width: 100%;
+  }
+  .path-divider {
+    align-self: stretch; display: flex; align-items: center; gap: 8px;
+    font-size: 10.5px; color: #5a5a70; margin: 2px 0;
+    white-space: nowrap;
+  }
+  .path-divider::before, .path-divider::after {
+    content: ""; flex: 1; height: 1px; background: #2c2c38;
+  }
+  .chat-input {
+    padding: 12px; border-top: 1px solid #2c2c38;
+    background: #1a1a22; font-size: 13px; color: #6a6a80;
+  }
+
+  /* Graph pane */
+  .graph-pane {
+    width: 470px; padding: 16px; background: #12121a;
+    display: flex; flex-direction: column;
+    flex-shrink: 0;
+  }
+  .graph-title {
+    font-size: 12px; color: #6a6a80; margin-bottom: 12px;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .add-node-btn {
+    background: #1a1f30; border: 1px dashed #7c9cff; color: #a8beff;
+    font-size: 11px; padding: 3px 10px; border-radius: 6px; cursor: pointer;
+    font-family: inherit; letter-spacing: 0;
+  }
+  .add-node-btn:hover { background: #22283d; }
+  .graph-canvas {
+    flex: 1; position: relative; overflow: hidden;
+    background: #0e0e14; border-radius: 8px;
+    min-height: 340px;
+  }
+  .graph-canvas svg.edges {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+  .node {
+    position: absolute; padding: 6px 12px; border-radius: 8px;
+    background: #22222c; border: 1px solid #3a3a48;
+    font-size: 12px; color: #c9c9dd;
+    white-space: nowrap;
+    user-select: none; cursor: grab;
+    z-index: 2;
+    transition: box-shadow 0.15s ease;
+  }
+  .node:hover { box-shadow: 0 0 0 2px rgba(124,156,255,0.25); }
+  .node.dragging { cursor: grabbing; z-index: 3; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  .node.main { background: #2a3d6b; border-color: #4a6dbb; color: #fff; }
+  .node.path { background: #26304e; border-color: #4a6dbb; color: #e8eeff; }
+  .node.current { background: #1e3a2e; border-color: #4abb7c; color: #fff; box-shadow: 0 0 0 3px rgba(74,187,124,0.15); }
+  .node.suggested { background: #2a2438; border-color: #8a6aff; color: #e0d4ff; box-shadow: 0 0 0 3px rgba(138,106,255,0.18); }
+  .node.dim { opacity: 0.4; }
+  .node.new { border-style: dashed; border-color: #7c9cff; background: #1a1f30; color: #a8beff; }
+  .node.ghost { border-style: dashed; border-color: #ff8c7c; background: transparent; color: #ff8c7c; opacity: 0.55; text-decoration: line-through; }
+  .node.old { border-style: dashed; border-color: #6a6a80; background: transparent; color: #8a8aa0; opacity: 0.6; }
+  .node.target { background: #3d2222; border-color: #ff8c7c; color: #ffd8d0; box-shadow: 0 0 0 3px rgba(255,140,124,0.18); }
+  .drag-hint {
+    position: absolute; bottom: 8px; right: 10px;
+    font-size: 10px; color: #4a4a5c;
+    background: rgba(20,20,28,0.8);
+    padding: 3px 8px; border-radius: 4px;
+    pointer-events: none;
+  }
+
+  /* Before/After comparison scroll */
+  .linear-chat {
+    background: #16161d; border: 1px solid #2c2c38; border-radius: 12px;
+    padding: 16px; height: 100%; overflow-y: scroll;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .linear-chat .msg { max-width: 100%; }
+  .lost { background: #3d2a2a !important; color: #ffcccc !important; }
+
+  /* Point list */
+  ul { list-style: none; }
+  ul li { position: relative; padding-left: 24px; margin-bottom: 12px; }
+  ul li::before {
+    content: ""; position: absolute; left: 0; top: 12px;
+    width: 6px; height: 6px; border-radius: 50%; background: #7c9cff;
+  }
+
+  /* Title slide */
+  .title-slide { justify-content: center; align-items: center; text-align: center; }
+  .title-slide h1 { font-size: 64px; background: linear-gradient(135deg, #7c9cff 0%, #b47cff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .title-slide .sub { font-size: 22px; color: #8a8aa0; margin-top: 20px; }
+
+  /* Flow diagram */
+  .flow {
+    display: flex; align-items: center; gap: 12px; justify-content: center;
+    margin: 24px 0; flex-wrap: wrap;
+  }
+  .flow-box {
+    padding: 16px 20px; background: #22222c; border: 1px solid #3a3a48;
+    border-radius: 10px; font-size: 15px; min-width: 140px; text-align: center;
+  }
+  .flow-arrow { color: #6a6a80; font-size: 20px; }
+
+  /* Callout */
+  .callout {
+    background: #1e2438; border-left: 3px solid #7c9cff;
+    padding: 16px 20px; border-radius: 6px; margin-top: 16px;
+    font-size: 16px; color: #d8d8e8;
+  }
+
+  /* Context chips */
+  .chip {
+    display: inline-block; padding: 2px 8px; border-radius: 5px;
+    background: #1e2438; border: 1px solid #3a4a7a;
+    font-size: 11px; color: #a8beff; margin: 2px;
+  }
+
+  .footer-meta {
+    position: fixed; bottom: 24px; left: 32px;
+    font-size: 12px; color: #4a4a5c;
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+
+  <!-- Slide 1: Title -->
+  <section class="slide active title-slide">
+    <div class="badge">CONCEPT DECK · 2026.07</div>
+    <h1>Study Copilot</h1>
+    <p class="sub">LLM 대화의 <strong style="color:#e8e8ee">컨텍스트를 그래프로 관리</strong>하는 학습 도구</p>
+    <p style="margin-top: 40px; font-size: 14px; color: #4a4a5c;">← → 방향키로 이동</p>
+  </section>
+
+  <!-- Slide 2: Problem -->
+  <section class="slide">
+    <div class="badge">문제</div>
+    <h2>대화가 누적될수록, 주제가 뒤섞인다</h2>
+    <p class="lead">
+      대화형 AI를 통해 학습하는 사람은, LLM과의 대화가 누적되면서 <span class="warn">다양한 주제가 혼재되어</span>,<br>
+      LLM에게서 <span class="warn">원하는 대답을 얻기 힘들다</span>.
+    </p>
+
+    <div class="two-col" style="margin-top: 24px;">
+      <div class="col">
+        <h3>실제로 일어나는 일</h3>
+        <div class="linear-chat" style="min-height: 400px;">
+          <div class="msg user">A논문 설명해줘</div>
+          <div class="msg ai" style="font-size:12.5px;">
+            attention 메커니즘 기반으로... encoder-decoder 구조...
+            positional encoding으로 순서 정보...
+          </div>
+          <div class="msg user">attention이 뭐야?</div>
+          <div class="msg ai" style="font-size:12.5px;">... Q,K,V ... softmax ...</div>
+          <div class="msg user">softmax는 왜 씀?</div>
+          <div class="msg ai" style="font-size:12.5px;">... 수치 안정성 문제로 log-sum-exp...</div>
+          <div class="msg user">다시 논문 얘기로 돌아가서, 실험 결과는 어때?</div>
+          <div class="msg ai lost" style="font-size:12.5px;">
+            (곁가지 대화가 맥락에 뒤섞인 채로 답변 → 원하는 초점을 잃음)
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <h3>고통의 정체</h3>
+        <ul>
+          <li><strong>컨텍스트 오염</strong> — 곁가지로 팠던 대화가 맥락에 뒤섞여 이후 답변의 초점을 흐림</li>
+          <li><strong>컨텍스트를 골라 넣을 수 없음</strong> — 지난 대화 중 필요한 부분만 모델에게 주고 싶어도 방법이 없음. 결국 새 창을 열고 처음부터 다시 설명</li>
+          <li><strong>모델이 뭘 보고 답하는지 알 수 없음</strong> — 질문을 보내면 지난 대화 중 무엇이 함께 전달되는지 화면 어디에도 표시되지 않음</li>
+          <li><strong>비용·품질 저하</strong> — 대화가 길어질수록 토큰은 늘고 답변 품질은 떨어짐</li>
+        </ul>
+        <div class="callout">
+          뒤섞인 주제를 갈래로 분리하고 — 컨텍스트를 <strong>보이게, 고를 수 있게</strong> 만들어야 한다.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 3: Solution Overview -->
+  <section class="slide">
+    <div class="badge">해결 구조</div>
+    <h2>노드 = 질문·답변 한 쌍, 경로 = 컨텍스트</h2>
+    <p class="lead">
+      대화를 <strong>Q&A 한 쌍 단위의 노드</strong>로 쪼개고, <strong>선택한 노드에서 루트까지 엣지로 이어진 경로만</strong> 컨텍스트로 넣는다.<br>
+      경로 밖 대화는 컨텍스트에 들어가지 않는다 — <span class="good">오염 원천 차단</span>.
+    </p>
+
+    <div class="flow">
+      <div class="flow-box">노드 선택 + 질문<br><span style="color:#8a8aa0; font-size:12px;">사용자</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background:#2a2438; border-color:#5a4a8a;">자동 분기 엔진<br><span style="color:#c9b8ff; font-size:12px;">선택한 트리의 모든 노드 순회<br>경로 텍스트 × 쿼리 비교</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background:#2a3d6b; border-color:#4a6dbb;">노드 위치 확정<br><span style="color:#c9c9dd; font-size:12px;">사용자 선택과 같으면 그대로<br>다르면 제안 → 승인 시 새 노드</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background:#1e3a2e; border-color:#4abb7c;">LLM 인풋 조립<br><span style="color:#c9c9dd; font-size:12px;">확정 노드→루트 경로 Q&A<br>+ 주입 컨텍스트 + 새 질문</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">답변 생성<br><span style="color:#8a8aa0; font-size:12px;">그 노드에 저장</span></div>
+    </div>
+
+    <div class="two-col" style="margin-top: 16px;">
+      <div class="col">
+        <h3>사용자가 마지막 노드를 지정했어도</h3>
+        <p>분기 엔진는 <strong>선택한 노드가 속한 트리의 모든 노드를 순회</strong>하며 "이 질문은 어느 노드 아래가 맞는가"를 먼저 판단한다.
+        사용자의 선택은 존중하되, 더 나은 위치가 있으면 근거와 함께 제안한다.</p>
+      </div>
+      <div class="col">
+        <h3>LLM에 들어가는 것은 딱 세 가지</h3>
+        <p>위치가 확정되면 <strong>① 그 노드에서 루트까지 경로의 Q&A ② 노드에 주입된 컨텍스트 ③ 새 질문</strong>으로 인풋을 조립해 LLM을 호출한다.
+        형제·다른 서브트리의 대화는 절대 섞이지 않는다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 4: UI Mockup - Main (interactive) -->
+  <section class="slide">
+    <div class="badge">UI 목업 · 메인 화면 (인터랙티브 — 노드를 클릭해보세요)</div>
+    <h2>왼쪽은 대화, 오른쪽은 컨텍스트 맵</h2>
+
+    <div class="mockup">
+      <div class="chat-pane">
+        <div class="mockup-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Path: <span id="pathMain"></span></span>
+        </div>
+        <div class="chat-body" id="chatMain"></div>
+        <div class="chat-input" id="inputMain"></div>
+      </div>
+      <div class="graph-pane">
+        <div class="graph-title">Context Map <button class="add-node-btn">＋ 새 노드</button></div>
+        <div class="graph-canvas" id="graphMain">
+          <svg class="edges"></svg>
+          <div class="drag-hint">클릭 = 전환 · 드래그 = 재배치 · 빈 곳 더블클릭 = 새 노드</div>
+        </div>
+        <div style="font-size: 11px; color: #6a6a80; margin-top: 12px;">
+          <span style="color:#4abb7c;">◉</span> 현재 노드 · <span style="color:#7c9cff;">→</span> 컨텍스트 경로 —
+          화살표는 <strong style="color:#c9c9dd;">참조 방향(루트 쪽)</strong>: 자식이 부모의 맥락을 이어받음<br>
+          경로 밖 노드(흐림)는 <strong style="color:#c9c9dd;">컨텍스트에 안 들어감</strong><br>
+          <strong style="color:#a8beff;">노드를 클릭하면 왼쪽 대화가 그 경로로 바뀝니다</strong>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 16px; font-size: 13px; color: #8a8aa0; text-align: center;">
+      채팅창에는 <span class="accent">선택 노드 → 루트 경로의 질문·답변만</span> 표시 —
+      화면에 보이는 것 = 모델이 아는 것. <strong style="color:#d8d8e8;">WYSIWYG 컨텍스트.</strong>
+    </p>
+  </section>
+
+  <!-- Slide 5: Context Selection Engine -->
+  <section class="slide">
+    <div class="badge">핵심 순간 ① — 자동 분기 엔진</div>
+    <h2>어디에 물어봐도, 분기 엔진가 최적 위치를 찾아준다</h2>
+
+    <div class="two-col" style="margin-top: 20px;">
+      <div class="col">
+        <h3>판정 파이프라인</h3>
+        <div style="background:#16161d; border:1px solid #2c2c38; border-radius:10px; padding: 20px; font-family: monospace; font-size: 13px; line-height: 1.9; color: #c9c9dd;">
+          <div><span class="accent">1. 사용자가 노드 지정 + 질문</span></div>
+          <div style="color:#8a8aa0;">   예: A논문 트리의 softmax 노드에서 입력</div>
+          <div style="margin-top: 12px;"><span class="accent">2. 선택한 트리의 모든 노드를 순회</span></div>
+          <div style="color:#8a8aa0;">   각 노드마다 <strong style="color:#c9c9dd;">그 노드→루트 경로의</strong></div>
+          <div style="color:#8a8aa0;">   <strong style="color:#c9c9dd;">전체 텍스트</strong>와 새 쿼리를 비교 →</div>
+          <div style="color:#8a8aa0;">   "이 노드의 하위로 적절한가" 점수화</div>
+          <div style="color:#6a6a80; font-size:11px;">   (순회 방식·비교 방법은 구현에서 선택)</div>
+          <div style="margin-top: 12px;"><span class="good">3-a. 사용자 선택과 같으면</span></div>
+          <div style="color:#8a8aa0;">   그 자리에서 위치 확정</div>
+          <div style="margin-top: 12px;"><span style="color:#c9b8ff;">3-b. 다르면</span></div>
+          <div style="color:#8a8aa0;">   근거와 함께 위치 제안 → 승인 시</div>
+          <div style="color:#8a8aa0;">   그곳에 새 노드 생성</div>
+          <div style="margin-top: 12px;"><span class="accent">4. LLM 인풋 조립 → 호출</span></div>
+          <div style="color:#8a8aa0;">   확정 노드→루트 경로 Q&A</div>
+          <div style="color:#8a8aa0;">   + 주입 컨텍스트 + 새 질문</div>
+          <div style="color:#8a8aa0;">   답변은 그 노드에 저장</div>
+        </div>
+        <p style="margin-top: 16px; font-size: 13px; color: #8a8aa0;">
+          확장 고민: 트리가 그래프로 일반화되면 노드 수만큼 경로 비교가 폭증 —
+          경로 텍스트의 <strong style="color:#c9c9dd;">K-V 캐시 재사용</strong> 등으로 비용을 눌러야 할 수 있다.
+        </p>
+      </div>
+      <div class="col">
+        <h3>사용자 관점</h3>
+        <div class="mockup" style="min-height: 340px;">
+          <div class="chat-pane" style="border-right: none;">
+            <div class="mockup-header">
+              <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+              <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Node: softmax (A논문 트리)</span>
+            </div>
+            <div class="chat-body">
+              <div class="msg ai ancestor" style="font-size:13px;">
+                ... 미분 가능해서 역전파에도 유리하고요 ...
+              </div>
+              <div class="msg user">encoder-decoder 구조는 뭐야?</div>
+              <div class="msg suggest">
+                🧭 이 질문은 <strong>softmax</strong>보다 <strong>📄 A논문</strong> 노드의 하위가 더 어울려요.<br>
+                <span style="color:#9a8ad0; font-size:11px;">이유: A논문(루트) 노드의 텍스트와 가장 유사 — softmax 경로와는 무관한 갈래</span><br>
+                <span style="color:#8a8aa0; font-size:11px;">[A논문 아래에 새 노드 만들기]  [그냥 여기서 답변]</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="margin-top: 16px; font-size: 14px; color: #8a8aa0;">
+          승인하면 <strong style="color:#c9c9dd;">A논문 아래 "encoder-decoder" 노드</strong>가 생기고,
+          컨텍스트도 그 경로(A논문→encoder-decoder)로 깨끗하게 잡힌다.
+          트리 안 어디서 물어봐도 분기 엔진가 위치를 잡아주므로, 사용자는 고민할 필요가 없다.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 비교 STEP 1: two trees + fresh empty node -->
+  <section class="slide">
+    <div class="badge">핵심 순간 ② — 트리를 넘나드는 비교 · STEP 1/3 (인터랙티브)</div>
+    <h2>시작: 트리 두 개, 그리고 빈 노드 하나</h2>
+    <p style="font-size: 15px; color: #9a9ab0; margin-bottom: 16px;">
+      <strong style="color:#d8d8e8;">A논문(Transformer) 트리</strong>와 <strong style="color:#d8d8e8;">B논문(Mamba) 트리</strong>를 각각 공부해 둔 상태.
+      두 트리를 비교하고 싶어진 사용자가 <span class="accent">＋ 새 노드</span>로 빈 노드 <strong style="color:#a8beff;">"개념 비교"</strong>를 만들었다 — 아직 컨텍스트는 비어 있다.
+    </p>
+
+    <div class="mockup">
+      <div class="chat-pane">
+        <div class="mockup-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Path: <span id="pathCmp1"></span></span>
+        </div>
+        <div class="chat-body" id="chatCmp1"></div>
+        <div class="chat-input" id="inputCmp1"></div>
+      </div>
+      <div class="graph-pane">
+        <div class="graph-title">Context Map <button class="add-node-btn">＋ 새 노드</button></div>
+        <div class="graph-canvas" id="graphCmp1">
+          <svg class="edges"></svg>
+          <div class="drag-hint">＋/더블클릭 = 새 노드 · 클릭 = 전환</div>
+        </div>
+        <div style="font-size: 11px; color: #6a6a80; margin-top: 12px;">
+          트리가 <strong style="color:#c9c9dd;">여러 개 공존</strong>할 수 있다 — 트리끼리는 컨텍스트가 완전히 분리됨<br>
+          <strong style="color:#a8beff;">양쪽 트리의 노드를 클릭</strong>해 보면 각자의 경로만 보이는 걸 확인 가능
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 14px; font-size: 13px; color: #8a8aa0; text-align: center;">
+      다음 단계: 두 트리에서 필요한 개념 노드만 <span class="accent">드래그 박스로 선택해 새 노드에 드롭</span>한다.
+    </p>
+  </section>
+
+  <!-- 비교 STEP 2: drop + choice dialog -->
+  <section class="slide">
+    <div class="badge">핵심 순간 ② — 트리를 넘나드는 비교 · STEP 2/3</div>
+    <h2>중간: 두 노드를 떨어뜨리자, 시스템이 묻는다</h2>
+    <p style="font-size: 15px; color: #9a9ab0; margin-bottom: 16px;">
+      사용자가 맵에서 <span class="accent">드래그 박스로 attention과 selective scan을 함께 선택</span>해
+      "개념 비교" 노드 위에 놓았다. 놓는 순간 시스템이 <strong style="color:#d8d8e8;">어떻게 넣을지</strong> 묻는다.
+      (⌘C → ⌘V로 텍스트·코드를 직접 넣는 것도 가능)
+    </p>
+
+    <div class="mockup">
+      <div class="chat-pane">
+        <div class="mockup-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Node: <strong style="color:#a8beff;">개념 비교</strong> — 드롭 직후</span>
+        </div>
+        <div class="chat-body">
+          <div class="msg suggest">
+            🔗 드래그로 선택한 <strong>2개 노드</strong>(attention · selective scan)를 놓았어요. 어떻게 넣을까요?<br>
+            <span style="color:#8a8aa0; font-size:11px;">[이 노드들만 (기본)]&nbsp;&nbsp;[루트까지 경로 포함]</span><br>
+            <span style="color:#9a8ad0; font-size:11px;">이 노드들만 = 두 노드의 Q&A만 · 경로 포함 = A논문→attention, B논문→selective scan 두 경로 전체</span>
+          </div>
+          <div class="followup-hint" style="align-self:center;">사용자가 고민 중... 논문 배경까지 필요한 비교라서 →</div>
+          <div class="msg branch-alert">✓ 사용자가 <strong>"루트까지 경로 포함"</strong> 선택</div>
+        </div>
+        <div class="chat-input">💬 아직 질문 전 — 컨텍스트 구성만 확정된 상태</div>
+      </div>
+      <div class="graph-pane">
+        <div class="graph-title">Context Map <button class="add-node-btn">＋ 새 노드</button></div>
+        <div class="graph-canvas" id="graphCmp2">
+          <svg class="edges"></svg>
+          <div class="drag-hint">드래그 박스 = 다중 선택 · 끌어다 놓기 = 주입</div>
+        </div>
+        <div style="font-size: 11px; color: #6a6a80; margin-top: 12px;">
+          선택된 두 노드(밝게)가 새 노드로 <span style="color:#8a6aff;">┈┈ 점선(주입 참조)</span>으로 연결됨 —
+          트리 엣지가 아니라서 <strong style="color:#c9c9dd;">두 트리 구조는 그대로</strong>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 14px; font-size: 13px; color: #8a8aa0; text-align: center;">
+      주입 방식은 <span class="accent">넣는 순간 사용자가 선택</span> — 기본값은 "이 노드들만".
+      그리고 주입은 <span class="accent">항상 스냅샷</span> — 이후 원본 노드가 바뀌거나 삭제돼도 여기 넣은 내용은 그대로다.
+    </p>
+  </section>
+
+  <!-- 비교 STEP 3: result -->
+  <section class="slide">
+    <div class="badge">핵심 순간 ② — 트리를 넘나드는 비교 · STEP 3/3</div>
+    <h2>결과: 이름이 달라도, 같은 일을 하는 개념이 비교된다</h2>
+    <p style="font-size: 15px; color: #9a9ab0; margin-bottom: 16px;">
+      주입된 두 경로만 컨텍스트로 들어간 상태에서 질문 —
+      LLM은 두 트리에서 쌓은 이해를 바탕으로 <strong style="color:#d8d8e8;">이름은 다르지만 역할이 같은 개념</strong>을 비교해 준다.
+    </p>
+
+    <div class="mockup">
+      <div class="chat-pane">
+        <div class="mockup-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Node: <strong style="color:#a8beff;">개념 비교</strong> 📎×2</span>
+        </div>
+        <div class="chat-body">
+          <div class="msg branch-alert">✓ 2개 경로 주입됨 — A논문→attention · B논문→selective scan</div>
+          <div class="msg user">
+            attention이랑 selective scan, 이름은 완전 다른데 둘 다 "과거 정보 중 뭘 참조할지 고르는" 역할 아니야? 비교해줘
+          </div>
+          <div class="msg ai">
+            맞아요, 이름만 다르지 같은 문제를 푸는 장치예요.<br><br>
+            <strong>공통점:</strong> 둘 다 입력 내용에 따라 "어떤 과거 정보를 얼마나 반영할지"를 동적으로 결정합니다.<br>
+            <strong>차이:</strong> attention은 모든 토큰 쌍의 관련도를 매번 계산(O(n²))하고,
+            selective scan은 게이트로 과거를 하나의 상태에 압축해 갑니다(O(n)).
+            주입해주신 두 논문 맥락으로 보면, B논문 자체가 A논문의 긴 시퀀스 비용 문제를 겨냥해 나온 후속 접근이에요...
+          </div>
+        </div>
+        <div class="chat-input">💬 컨텍스트: 두 경로(A논문→attention · B논문→selective scan)만 — 다른 곁가지는 안 들어감</div>
+      </div>
+      <div class="graph-pane">
+        <div class="graph-title">Context Map <button class="add-node-btn">＋ 새 노드</button></div>
+        <div class="graph-canvas" id="graphNew">
+          <svg class="edges"></svg>
+          <div class="drag-hint">＋/더블클릭 = 새 노드 · 끌어다 놓기 = 주입</div>
+        </div>
+        <div style="font-size: 11px; color: #6a6a80; margin-top: 12px;">
+          새 노드 <strong style="color:#a8beff;">"개념 비교"</strong>는 <strong style="color:#c9c9dd;">어느 트리에도 속하지 않는 독립 노드</strong> —
+          경로 포함이라 두 루트까지 밝게 표시<br>
+          <span class="chip">🔗 A논문→attention (경로 포함)</span>
+          <span class="chip">🔗 B논문→selective scan (경로 포함)</span>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 14px; font-size: 13px; color: #8a8aa0; text-align: center;">
+      기존 채팅에서는 불가능했던 동작 — 세션 두 개를 열어 복붙하는 대신,
+      <span class="accent">쌓아둔 대화의 조각을 골라 합친다</span>. 곁가지(softmax·SSM 상태)는 어느 쪽이든 안 들어간다.
+    </p>
+  </section>
+
+  <!-- 삭제 STEP 1: delete dialog on the original tree -->
+  <section class="slide">
+    <div class="badge">핵심 순간 ③ — 노드 삭제 · STEP 1/3</div>
+    <h2>시작: 중간 노드를 지우려 하자, 시스템이 묻는다</h2>
+    <p style="font-size: 15px; color: #9a9ab0; margin-bottom: 16px;">
+      사용자가 <strong style="color:#d8d8e8;">attention</strong>을 우클릭 → 삭제.
+      리프 노드면 그냥 지워지지만, attention은 <span class="warn">자식 2개(softmax · multi-head)를 가진 중간 노드</span>라
+      시스템이 처리 방식을 묻는다.
+    </p>
+
+    <div class="mockup">
+      <div class="chat-pane">
+        <div class="mockup-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Path: 📄 A논문 › <strong style="color:#ff8c7c;">attention (삭제 요청됨)</strong></span>
+        </div>
+        <div class="chat-body">
+          <div class="path-divider">📄 A논문 (루트)</div>
+          <div class="msg user ancestor">A논문 설명해줘 📎</div>
+          <div class="msg ai ancestor">attention 메커니즘 기반으로 encoder-decoder 구조를 제안하며...</div>
+          <div class="path-divider">attention ← 삭제 대상</div>
+          <div class="msg user ancestor">attention이 뭐야?</div>
+          <div class="msg ai ancestor">각 토큰이 다른 토큰을 얼마나 참조할지 가중치를 계산하는 메커니즘이에요...</div>
+          <div class="msg suggest">
+            🗑 <strong>attention</strong>은 자식 2개(softmax · multi-head)를 가진 중간 노드예요. 어떻게 삭제할까요?<br>
+            <span style="color:#8a8aa0; font-size:11px;">[서브트리째 삭제 — 아래 전부 제거]&nbsp;&nbsp;[자식은 부모에 이어붙이기]</span><br>
+            <span style="color:#9a8ad0; font-size:11px;">이어붙이기를 고르면 추가 선택: 삭제된 노드의 한 줄 요약을 자식 경로에 [남기기 / 남기지 않기]</span>
+          </div>
+        </div>
+        <div class="chat-input">💬 선택 대기 중 — 다음 두 페이지가 각 선택의 결과</div>
+      </div>
+      <div class="graph-pane">
+        <div class="graph-title">Context Map <button class="add-node-btn">＋ 새 노드</button></div>
+        <div class="graph-canvas" id="graphDel0">
+          <svg class="edges"></svg>
+          <div class="drag-hint">우클릭 = 삭제</div>
+        </div>
+        <div style="font-size: 11px; color: #6a6a80; margin-top: 12px;">
+          <span style="color:#ff8c7c;">빨간 노드 = 삭제 대상</span> — 그 아래 softmax → log-sum-exp, multi-head 서브트리가 걸려 있음<br>
+          루트를 지우면 <strong style="color:#c9c9dd;">자식들이 각각 새 트리의 루트</strong>가 됨<br>
+          숨기기(soft delete)는 제공 안 함 — "보이는 것 = 모델이 아는 것" 원칙 위배
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 14px; font-size: 13px; color: #8a8aa0; text-align: center;">
+      주입·삭제 모두 같은 패턴 — <span class="accent">구조가 바뀌는 순간, 사용자가 선택</span>한다.
+    </p>
+  </section>
+
+  <!-- 삭제 STEP 2: result A — subtree -->
+  <section class="slide">
+    <div class="badge">핵심 순간 ③ — 노드 삭제 · STEP 2/3 — 결과 ①: 서브트리째 (인터랙티브)</div>
+    <h2>결과 ①: 통째로 지운다 — 다른 경로는 영향 없음</h2>
+    <p style="font-size: 15px; color: #9a9ab0; margin-bottom: 16px;">
+      <span class="warn">[서브트리째 삭제]</span>를 고른 경우 —
+      attention과 그 아래 전부(softmax · multi-head · log-sum-exp)가 함께 사라진다.
+    </p>
+
+    <div class="mockup">
+      <div class="chat-pane">
+        <div class="mockup-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Path: <span id="pathDelA"></span></span>
+        </div>
+        <div class="chat-body" id="chatDelA"></div>
+        <div class="chat-input" id="inputDelA"></div>
+      </div>
+      <div class="graph-pane">
+        <div class="graph-title">Context Map <button class="add-node-btn">＋ 새 노드</button></div>
+        <div class="graph-canvas" id="graphDelA">
+          <svg class="edges"></svg>
+          <div class="drag-hint">클릭 = 전환 · 우클릭 = 삭제</div>
+        </div>
+        <div style="font-size: 11px; color: #6a6a80; margin-top: 12px;">
+          <span style="color:#ff8c7c;">빨간 점선 = 방금 삭제된 서브트리</span> (표시용 잔상)<br>
+          남은 트리는 그대로 — <strong style="color:#a8beff;">노드를 클릭하면 왼쪽 대화가 그 경로로 바뀝니다</strong>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 14px; font-size: 13px; color: #8a8aa0; text-align: center;">
+      경로가 서로 독립적이라, 곁가지 하나를 통째로 정리해도
+      <span class="accent">다른 서브트리의 대화·컨텍스트는 전혀 변하지 않는다</span>.
+    </p>
+  </section>
+
+  <!-- 삭제 STEP 3: result B — splice -->
+  <section class="slide">
+    <div class="badge">핵심 순간 ③ — 노드 삭제 · STEP 3/3 — 결과 ②: 이어붙이기 (인터랙티브)</div>
+    <h2>결과 ②: 자식은 살리고, 요약 스텁으로 구멍을 메운다</h2>
+    <p style="font-size: 15px; color: #9a9ab0; margin-bottom: 16px;">
+      <span class="accent">[이어붙이기 + 요약 남기기]</span>를 고른 경우 — 자식(softmax · multi-head)이 A논문 바로 아래로 올라간다.
+      하위 대화는 attention이 경로에 있던 시절에 만들어진 것이라 그냥 지우면 맥락에 구멍이 남는데,
+      삭제된 노드의 <span class="accent">한 줄 요약 스텁</span>이 그 자리를 메운다.
+    </p>
+
+    <div class="mockup">
+      <div class="chat-pane">
+        <div class="mockup-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Path: <span id="pathDelB"></span></span>
+        </div>
+        <div class="chat-body" id="chatDelB"></div>
+        <div class="chat-input" id="inputDelB"></div>
+      </div>
+      <div class="graph-pane">
+        <div class="graph-title">Context Map <button class="add-node-btn">＋ 새 노드</button></div>
+        <div class="graph-canvas" id="graphDelB">
+          <svg class="edges"></svg>
+          <div class="drag-hint">클릭 = 전환 · 우클릭 = 삭제</div>
+        </div>
+        <div style="font-size: 11px; color: #6a6a80; margin-top: 12px;">
+          softmax·multi-head가 <strong style="color:#c9c9dd;">A논문 바로 아래로 승계</strong> —
+          <strong style="color:#a8beff;">softmax나 log-sum-exp를 클릭</strong>하면 경로에 요약 스텁이 끼는 게 보입니다<br>
+          숨기기(soft delete)는 제공 안 함 — "보이는 것 = 모델이 아는 것" 원칙 위배
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 14px; font-size: 13px; color: #8a8aa0; text-align: center;">
+      스텁도 채팅창에 그대로 보인다 — 모델이 받는 컨텍스트와 화면이 어긋나지 않는다 (<span class="accent">WYSIWYG 유지</span>).
+      "남기지 않기"를 고르면 스텁 없이 A논문 → softmax로 바로 이어진다.
+    </p>
+  </section>
+
+  <!-- 리패런팅 STEP 1: before -->
+  <section class="slide">
+    <div class="badge">핵심 순간 ④ — 리패런팅 · STEP 1/2 (인터랙티브)</div>
+    <h2>시작: 위치가 잘못 잡힌 노드가 보인다</h2>
+    <p style="font-size: 15px; color: #9a9ab0; margin-bottom: 16px;">
+      positional enc.가 <strong style="color:#d8d8e8;">A논문 바로 아래</strong>에 있다.
+      그런데 사용자가 보니 이건 encoder-decoder를 파다 나온 개념 —
+      지금 경로(A논문 › positional enc.)에는 <span class="warn">encoder-decoder의 맥락이 빠져 있다</span>.
+    </p>
+
+    <div class="mockup">
+      <div class="chat-pane">
+        <div class="mockup-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Path: <span id="pathReA0"></span></span>
+        </div>
+        <div class="chat-body" id="chatReA0"></div>
+        <div class="chat-input" id="inputReA0"></div>
+      </div>
+      <div class="graph-pane">
+        <div class="graph-title">Context Map <button class="add-node-btn">＋ 새 노드</button></div>
+        <div class="graph-canvas" id="graphReA0">
+          <svg class="edges"></svg>
+          <div class="drag-hint">클릭 = 전환 · 노드 위로 드롭 = 리패런팅</div>
+        </div>
+        <div style="font-size: 11px; color: #6a6a80; margin-top: 12px;">
+          현재 positional enc.는 <strong style="color:#c9c9dd;">루트 직속</strong> —
+          <strong style="color:#a8beff;">positional enc. 클릭</strong>하면 경로가 A논문 › positional enc. 2개뿐인 게 보입니다
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 14px; font-size: 13px; color: #8a8aa0; text-align: center;">
+      사용자가 positional enc.를 집어 <span class="accent">encoder-decoder 위로 드래그</span>한다 → 다음 페이지가 결과.
+    </p>
+  </section>
+
+  <!-- 리패런팅 STEP 2: after -->
+  <section class="slide">
+    <div class="badge">핵심 순간 ④ — 리패런팅 · STEP 2/2 — 결과 (인터랙티브)</div>
+    <h2>결과: 떼어서 다른 노드 아래에 붙었다</h2>
+    <p style="font-size: 15px; color: #9a9ab0; margin-bottom: 16px;">
+      <strong style="color:#d8d8e8;">encoder-decoder 위에 드롭</strong> → 그 자식으로 이동 완료.
+      옮기는 순간 positional enc.의 경로 컨텍스트가 <span class="accent">새 위치 기준으로 즉시 재구성</span>된다.
+    </p>
+
+    <div class="mockup">
+      <div class="chat-pane">
+        <div class="mockup-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Path: <span id="pathReA"></span></span>
+        </div>
+        <div class="chat-body" id="chatReA"></div>
+        <div class="chat-input" id="inputReA"></div>
+      </div>
+      <div class="graph-pane">
+        <div class="graph-title">Context Map <button class="add-node-btn">＋ 새 노드</button></div>
+        <div class="graph-canvas" id="graphReA">
+          <svg class="edges"></svg>
+          <div class="drag-hint">클릭 = 전환 · 노드 위로 드롭 = 리패런팅</div>
+        </div>
+        <div style="font-size: 11px; color: #6a6a80; margin-top: 12px;">
+          <span style="color:#8a8aa0;">회색 점선 화살표 ┈▸ = 이동 경로</span> · <span style="color:#5a5a70;">흐린 점선 = 끊어진 예전 연결 (A논문 직속)</span><br>
+          <strong style="color:#a8beff;">positional enc.를 클릭</strong>하면 경로가
+          A논문 › encoder-decoder › positional enc.로 잡히는 게 보입니다
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 14px; font-size: 13px; color: #8a8aa0; text-align: center;">
+      이동 후 positional enc.에서 질문하면 <span class="accent">encoder-decoder의 맥락이 새로 포함</span>되어 들어간다 —
+      분기 엔진가 잘못 잡은 위치도 사용자가 언제든 바로잡을 수 있다.
+    </p>
+  </section>
+
+  <!-- 끼워넣기 STEP 1: before -->
+  <section class="slide">
+    <div class="badge">핵심 순간 ⑤ — 끼워넣기 · STEP 1/2 (인터랙티브)</div>
+    <h2>시작: 경로에 있어야 할 중간 개념이 딴 갈래에 있다</h2>
+    <p style="font-size: 15px; color: #9a9ab0; margin-bottom: 16px;">
+      scaled dot-product가 <strong style="color:#d8d8e8;">A논문 직속의 별도 갈래</strong>로 잡혀 있다.
+      그런데 softmax는 사실 scaled dot-product 계산의 일부 —
+      지금 softmax 경로(A논문 › attention › softmax)에는 <span class="warn">그 중간 맥락이 빠져 있다</span>.
+    </p>
+
+    <div class="mockup">
+      <div class="chat-pane">
+        <div class="mockup-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Path: <span id="pathReB0"></span></span>
+        </div>
+        <div class="chat-body" id="chatReB0"></div>
+        <div class="chat-input" id="inputReB0"></div>
+      </div>
+      <div class="graph-pane">
+        <div class="graph-title">Context Map <button class="add-node-btn">＋ 새 노드</button></div>
+        <div class="graph-canvas" id="graphReB0">
+          <svg class="edges"></svg>
+          <div class="drag-hint">클릭 = 전환 · 엣지 위로 드롭 = 끼워넣기</div>
+        </div>
+        <div style="font-size: 11px; color: #6a6a80; margin-top: 12px;">
+          scaled dot-product가 <strong style="color:#c9c9dd;">루트 직속의 별도 갈래</strong>에 있음 —
+          <strong style="color:#a8beff;">softmax를 클릭</strong>하면 경로에 그게 없는 걸 확인 가능
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 14px; font-size: 13px; color: #8a8aa0; text-align: center;">
+      사용자가 scaled dot-product를 집어 <span class="accent">attention–softmax 엣지 위로 드래그</span>한다 → 다음 페이지가 결과.
+    </p>
+  </section>
+
+  <!-- 끼워넣기 STEP 2: after -->
+  <section class="slide">
+    <div class="badge">핵심 순간 ⑤ — 끼워넣기 · STEP 2/2 — 결과 (인터랙티브)</div>
+    <h2>결과: 부모-자식 사이에 끼워넣어졌다</h2>
+    <p style="font-size: 15px; color: #9a9ab0; margin-bottom: 16px;">
+      <strong style="color:#d8d8e8;">attention–softmax 엣지 위에 드롭</strong> → 두 노드 사이에 끼워넣기 완료.
+      softmax 이하의 경로 컨텍스트에 <span class="accent">빠져 있던 중간 맥락이 채워진다</span>.
+    </p>
+
+    <div class="mockup">
+      <div class="chat-pane">
+        <div class="mockup-header">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: #8a8aa0;">Path: <span id="pathReB"></span></span>
+        </div>
+        <div class="chat-body" id="chatReB"></div>
+        <div class="chat-input" id="inputReB"></div>
+      </div>
+      <div class="graph-pane">
+        <div class="graph-title">Context Map <button class="add-node-btn">＋ 새 노드</button></div>
+        <div class="graph-canvas" id="graphReB">
+          <svg class="edges"></svg>
+          <div class="drag-hint">클릭 = 전환 · 엣지 위로 드롭 = 끼워넣기</div>
+        </div>
+        <div style="font-size: 11px; color: #6a6a80; margin-top: 12px;">
+          <span style="color:#8a8aa0;">회색 점선 화살표 ┈▸ = 이동 경로</span> —
+          점선 칩(이전 위치)에서 attention–softmax <strong style="color:#c9c9dd;">사이 자리</strong>로<br>
+          <strong style="color:#a8beff;">softmax나 log-sum-exp를 클릭</strong>하면 끼워넣은 노드가 경로에 포함된 게 보입니다
+        </div>
+      </div>
+    </div>
+    <p style="margin-top: 14px; font-size: 13px; color: #8a8aa0; text-align: center;">
+      삭제(케이스 B)의 요약 스텁이 경로의 <span class="accent">구멍을 메우는</span> 수단이라면,
+      끼워넣기는 빠져 있던 중간 맥락을 <span class="accent">경로에 채워 넣는</span> 수단 — 서로 반대 방향의 재구성.
+    </p>
+  </section>
+
+  <!-- Slide 11: Value -->
+  <section class="slide">
+    <div class="badge">제공 가치</div>
+    <h2>왜 사용자가 이걸 쓰는가</h2>
+
+    <div class="two-col" style="margin-top: 24px; flex: 0 0 auto;">
+      <div class="col">
+        <h3 style="color:#ff8c7c;">Before</h3>
+        <ul>
+          <li>모든 대화가 통째로 컨텍스트에 누적</li>
+          <li>곁가지가 이후 답변을 오염</li>
+          <li>모델이 뭘 알고 있는지 안 보임</li>
+          <li>맥락 바꾸려면 새 창 + 처음부터 재설명</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3 style="color:#7cffa8;">After</h3>
+        <ul>
+          <li>경로 = 컨텍스트, 경로 밖은 안 들어감</li>
+          <li>분기 엔진가 질문마다 최적 위치를 잡아줌</li>
+          <li>화면에 보이는 대화 = 모델이 아는 것</li>
+          <li>드래그·붙여넣기로 원하는 것만 주입</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top: 24px;">
+      <strong>핵심 인사이트:</strong> LLM 시대의 UI 병목은 "생성"이 아니라 <span class="accent">"컨텍스트 관리"</span>다.<br>
+      우리는 컨텍스트를 <span class="accent">보이게 하고, 고를 수 있게</span> 만든다.
+    </div>
+
+    <h3 style="margin-top: 28px;">나중에 고려할 것들</h3>
+    <ul style="font-size: 16px;">
+      <li><strong>트리 → 그래프 일반화</strong> — 한 노드가 부모를 여러 개 갖는 구조. 경로 비교가 폭증하므로 K-V 캐시 재사용 등 비용 최적화 필요</li>
+      <li><strong>하위 종합 질문</strong> — 중간 노드에서 그 아래 서브트리 내용까지 걸치는 질문을 하면, 경로(위쪽)만으로는 컨텍스트가 부족. 분기 엔진가 관련 하위 노드들을 감지해 <strong>주입 컨텍스트로 제안</strong>하는 방식 검토</li>
+      <li><strong>노드 병합</strong> — 노드는 항상 Q&A 한 쌍. 트리가 커지면 여러 쌍을 요약해 <strong>하나의 노드로 합치는</strong> 기능으로 밀도 관리</li>
+      <li><strong>서브트리 접기</strong> — 완료한 갈래는 접어서 맵을 가볍게. <strong>접힌 것과 펼쳐진 것이 한눈에 구분되는 표시</strong>가 관건</li>
+    </ul>
+  </section>
+
+</div>
+
+<div class="nav">
+  <button onclick="prev()">←</button>
+  <span id="counter">1 / 16</span>
+  <button onclick="next()">→</button>
+</div>
+<div class="footer-meta">Study Copilot · Concept Deck</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const onSlideShow = [];   // graph redraw callbacks (hidden slides can't measure node sizes)
+  let idx = 0;
+  function show(i) {
+    slides.forEach(s => s.classList.remove('active'));
+    idx = Math.max(0, Math.min(slides.length - 1, i));
+    slides[idx].classList.add('active');
+    document.getElementById('counter').textContent = `${idx + 1} / ${slides.length}`;
+    requestAnimationFrame(() => onSlideShow.forEach(fn => fn()));
+  }
+  function next() { show(idx + 1); }
+  function prev() { show(idx - 1); }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') next();
+    if (e.key === 'ArrowLeft') prev();
+  });
+  window.addEventListener('resize', () => onSlideShow.forEach(fn => fn()));
+
+  // ---- Interactive graph renderer ----
+  // opts.interactive: highlight the active node's path to root, dim the rest
+  // opts.onSelect(id): called when a node is clicked (not dragged)
+  function initGraph(canvasId, data, opts = {}) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+    const svg = canvas.querySelector('svg.edges');
+    const nodeMap = {};
+    const parentOf = {};
+    // only tree edges define parenthood; dash (injection) / move (relocation
+    // indicator) / old (severed former link) edges must not affect path computation
+    data.edges.forEach(e => { if (!e.dash && !e.move && !e.old) parentOf[e.to] = e.from; });
+
+    let activeId = opts.initial || null;
+
+    data.nodes.forEach(n => {
+      const el = document.createElement('div');
+      el.className = 'node' + (n.state ? ' ' + n.state : '');
+      el.textContent = n.label;
+      canvas.appendChild(el);
+      nodeMap[n.id] = { el, x: 0, y: 0 };
+    });
+
+    // Nodes use fractional coords (fx/fy in 0..1) so the layout spreads across
+    // whatever size the canvas actually renders at.
+    function positionNodes() {
+      const W = canvas.clientWidth, H = canvas.clientHeight;
+      if (!W || !H) return;
+      data.nodes.forEach(n => {
+        const rec = nodeMap[n.id];
+        rec.x = n.fx * (W - rec.el.offsetWidth);
+        rec.y = n.fy * (H - rec.el.offsetHeight);
+      });
+
+      // resolve horizontal overlaps within each row (nodes sharing fy),
+      // e.g. when the " ← 현재" suffix widens a label into its neighbor
+      const GAP = 14;
+      const rows = {};
+      data.nodes.forEach(n => { (rows[n.fy] = rows[n.fy] || []).push(nodeMap[n.id]); });
+      Object.values(rows).forEach(row => {
+        row.sort((a, b) => a.x - b.x);
+        for (let i = 1; i < row.length; i++) {
+          const minX = row[i - 1].x + row[i - 1].el.offsetWidth + GAP;
+          if (row[i].x < minX) row[i].x = minX;
+        }
+        const last = row[row.length - 1];
+        const spill = last.x + last.el.offsetWidth - (W - 6);
+        if (spill > 0) {
+          row.forEach(r => { r.x -= spill; });
+          row[0].x = Math.max(4, row[0].x);
+          for (let i = 1; i < row.length; i++) {
+            const minX = row[i - 1].x + row[i - 1].el.offsetWidth + GAP;
+            if (row[i].x < minX) row[i].x = minX;
+          }
+        }
+      });
+
+      data.nodes.forEach(n => {
+        const rec = nodeMap[n.id];
+        rec.el.style.left = rec.x + 'px';
+        rec.el.style.top = rec.y + 'px';
+      });
+    }
+
+    function pathSet(id) {
+      const s = new Set();
+      let cur = id;
+      while (cur) { s.add(cur); cur = parentOf[cur]; }
+      return s;
+    }
+
+    function applyStates() {
+      if (!opts.interactive) return;
+      const ps = pathSet(activeId);
+      data.nodes.forEach(n => {
+        if (n.fixed) return; // e.g. ghost chips keep their own style
+        const rec = nodeMap[n.id];
+        rec.el.className = 'node ' + (n.id === activeId ? 'current' : ps.has(n.id) ? 'path' : 'dim');
+        rec.el.textContent = n.label + (n.id === activeId ? ' ← 현재' : '');
+      });
+    }
+
+    // point on `el`'s border where the segment from (sx,sy) to its center (cx,cy) exits
+    function borderPoint(cx, cy, sx, sy, el) {
+      const dx = cx - sx, dy = cy - sy;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len, uy = dy / len;
+      const hw = el.offsetWidth / 2 + 2, hh = el.offsetHeight / 2 + 2;
+      const k = Math.min(hw / (Math.abs(ux) || 1e-6), hh / (Math.abs(uy) || 1e-6));
+      return [cx - ux * k, cy - uy * k];
+    }
+
+    function redrawEdges() {
+      // markerUnits="userSpaceOnUse" keeps every arrowhead the same size
+      // regardless of stroke width
+      const arw = (id, color) =>
+        `<marker id="${id}-${canvasId}" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="${color}"/></marker>`;
+      svg.innerHTML = `<defs>${arw('arw', '#8a8aa0')}${arw('arwt', '#55556a')}${arw('arwh', '#7c9cff')}</defs>`;
+      const ps = opts.interactive ? pathSet(activeId) : null;
+      data.edges.forEach(e => {
+        const a = nodeMap[e.from], b = nodeMap[e.to];
+        if (!a || !b) return;
+        const hl = ps ? (!e.dash && !e.move && !e.old && ps.has(e.from) && ps.has(e.to)) : e.hl;
+        const ax = a.x + a.el.offsetWidth / 2;
+        const ay = a.y + a.el.offsetHeight / 2;
+        const bx = b.x + b.el.offsetWidth / 2;
+        const by = b.y + b.el.offsetHeight / 2;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        let x1 = ax, y1 = ay, x2 = bx, y2 = by;
+
+        if (e.move) {
+          // relocation indicator: old position → new position,
+          // arrow tip touching the target chip's border
+          [x2, y2] = borderPoint(bx, by, ax, ay, b.el);
+          line.setAttribute('stroke', '#8a8aa0');
+          line.setAttribute('stroke-width', '1.5');
+          line.setAttribute('stroke-dasharray', '4 4');
+          line.setAttribute('marker-end', `url(#arw-${canvasId})`);
+        } else if (e.dash) {
+          // injection reference, not a tree edge
+          line.setAttribute('stroke', '#8a6aff');
+          line.setAttribute('stroke-width', '2');
+          line.setAttribute('stroke-dasharray', '6 5');
+        } else if (e.old) {
+          // severed former tree link (before the move)
+          line.setAttribute('stroke', '#5a5a70');
+          line.setAttribute('stroke-width', '1.5');
+          line.setAttribute('stroke-dasharray', '3 6');
+        } else {
+          // tree edge, drawn child → parent: the arrow points toward the root
+          // because a child references its ancestors' context
+          x1 = bx; y1 = by;
+          [x2, y2] = borderPoint(ax, ay, bx, by, a.el);
+          line.setAttribute('stroke', hl ? '#7c9cff' : '#3a3a48');
+          line.setAttribute('stroke-width', hl ? '2.5' : '1.5');
+          line.setAttribute('marker-end', `url(#${hl ? 'arwh' : 'arwt'}-${canvasId})`);
+        }
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        svg.appendChild(line);
+      });
+    }
+
+    applyStates();
+    requestAnimationFrame(() => { positionNodes(); redrawEdges(); });
+    onSlideShow.push(() => { positionNodes(); redrawEdges(); });
+
+    // Drag handling (mouseup with <5px movement counts as a click)
+    Object.entries(nodeMap).forEach(([id, n]) => {
+      let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+      n.el.addEventListener('mousedown', e => {
+        dragging = true;
+        sx = e.clientX; sy = e.clientY;
+        ox = n.x; oy = n.y;
+        n.el.classList.add('dragging');
+        e.preventDefault();
+      });
+      document.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        n.x = ox + (e.clientX - sx);
+        n.y = oy + (e.clientY - sy);
+        n.el.style.left = n.x + 'px';
+        n.el.style.top = n.y + 'px';
+        redrawEdges();
+      });
+      document.addEventListener('mouseup', e => {
+        if (!dragging) return;
+        dragging = false;
+        n.el.classList.remove('dragging');
+        const moved = Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy);
+        if (moved < 5 && opts.onSelect) opts.onSelect(id);
+      });
+    });
+
+    return {
+      parentOf,
+      // labels change width (" ← 현재" suffix), so re-run layout on switch
+      setActive(id) { activeId = id; applyStates(); positionNodes(); redrawEdges(); }
+    };
+  }
+
+  // ---- Interactive path-chat mockup (slide-4 pattern, reused across slides) ----
+  // Clicking a node re-renders the left chat with its root-path Q&A only.
+  const baseLabels = {
+    root: '📄 A논문', attention: 'attention', softmax: 'softmax', lse: 'log-sum-exp',
+    multihead: 'multi-head', sdp: 'scaled dot-product',
+    enc: 'encoder-decoder', seq2seq: 'seq2seq', rnn: 'RNN 병목', pos: 'positional enc.',
+  };
+  const baseConvo = {
+    root:      { q: 'A논문 설명해줘 📎', a: 'attention 메커니즘 기반으로 encoder-decoder 구조를 제안하며, 순서 정보를 담기 위해 positional encoding을 도입합니다.' },
+    attention: { q: 'attention이 뭐야?', a: '각 토큰이 다른 토큰을 얼마나 참조할지 가중치를 계산하는 메커니즘이에요. Q, K, V를 만들고 softmax로 정규화해서 문맥 벡터를 만듭니다.' },
+    softmax:   { q: 'softmax는 왜 쓰는거야?', a: '지수 함수로 차이를 증폭시키면서도 합이 1이 되는 확률 분포를 만들기 때문입니다. 미분 가능해서 역전파에도 유리하고요.' },
+    lse:       { q: 'log-sum-exp는 뭔데?', a: 'softmax를 그대로 계산하면 지수가 커져 오버플로가 나요. 최댓값을 먼저 빼고 계산해 수치 안정성을 확보하는 기법입니다.' },
+    multihead: { q: 'head를 왜 여러 개로 쪼개?', a: '각 head가 구문·의미·위치 같은 서로 다른 관계를 병렬로 학습하게 하려는 거예요. 표현 공간을 나눠 여러 시점으로 보는 효과입니다.' },
+    sdp:       { q: 'scaled dot-product는 뭔데?', a: 'Q·K 내적을 √d로 나눠 크기를 안정화한 attention 점수 계산이에요. 이 점수가 softmax로 들어가 가중치가 됩니다.' },
+    enc:       { q: 'encoder-decoder 구조가 뭐야?', a: '입력 전체를 이해해 표현으로 압축하는 encoder와, 그 표현을 받아 출력을 순차 생성하는 decoder를 분리한 구조입니다.' },
+    seq2seq:   { q: 'seq2seq랑은 무슨 관계야?', a: 'seq2seq가 encoder-decoder의 원조 격이에요. RNN 기반 seq2seq의 병목을 attention으로 해소한 게 이 논문의 출발점입니다.' },
+    rnn:       { q: 'RNN 병목이 뭐였는데?', a: '문장 전체를 고정 크기 벡터 하나에 눌러 담다 보니 긴 문장에서 정보가 손실됐어요. 순차 처리라 병렬화도 안 됐고요.' },
+    pos:       { q: 'positional encoding은 왜 필요해?', a: 'attention 자체에는 순서 개념이 없어서, 각 위치마다 고유한 벡터를 더해 토큰 순서를 알려주는 장치입니다.' },
+  };
+
+  function setupMockup(cfg) {
+    const api = initGraph(cfg.canvas, cfg.graph, {
+      interactive: true,
+      initial: cfg.initial,
+      onSelect: id => { if (!cfg.convo[id]) return; api.setActive(id); render(id); }
+    });
+
+    function render(id) {
+      const path = [];
+      let cur = id;
+      while (cur) { path.unshift(cur); cur = api.parentOf[cur]; }
+
+      const body = document.getElementById(cfg.chat);
+      body.innerHTML = '';
+      if (cfg.banner) {
+        const b = document.createElement('div');
+        b.className = 'msg ' + (cfg.bannerType || 'branch-alert');
+        b.innerHTML = cfg.banner;
+        body.appendChild(b);
+      }
+      path.forEach((nid, i) => {
+        const last = i === path.length - 1;
+        const stub = cfg.stubs && cfg.stubs[nid];
+        if (stub) {
+          const sd = document.createElement('div');
+          sd.className = 'path-divider';
+          sd.textContent = stub.title;
+          body.appendChild(sd);
+          const sm = document.createElement('div');
+          sm.className = 'msg ai ancestor';
+          sm.style.cssText = 'font-size:12.5px; border:1px dashed #3a3a48;';
+          sm.textContent = stub.text;
+          body.appendChild(sm);
+        }
+        const dv = document.createElement('div');
+        dv.className = 'path-divider';
+        dv.textContent = cfg.labels[nid] + (last ? ' ← 현재 노드' : '');
+        body.appendChild(dv);
+        const u = document.createElement('div');
+        u.className = 'msg user' + (last ? '' : ' ancestor');
+        u.textContent = cfg.convo[nid].q;
+        body.appendChild(u);
+        const a = document.createElement('div');
+        a.className = 'msg ai' + (last ? '' : ' ancestor');
+        a.textContent = cfg.convo[nid].a;
+        body.appendChild(a);
+      });
+
+      document.getElementById(cfg.pathEl).innerHTML = path
+        .map((nid, i) => i === path.length - 1
+          ? `<strong style="color:#7cffa8;">${cfg.labels[nid]}</strong>`
+          : cfg.labels[nid])
+        .join(' › ');
+      const stubCount = cfg.stubs ? path.filter(n => cfg.stubs[n]).length : 0;
+      document.getElementById(cfg.inputEl).textContent =
+        `💬 ${cfg.labels[id]} 노드에서 이어서 질문... (컨텍스트: 경로 ${path.length}개 노드${stubCount ? ' + 요약 스텁 ' + stubCount + '개' : ''}만)`;
+    }
+    render(cfg.initial);
+  }
+
+  // Slide 4: main screen
+  setupMockup({
+    canvas: 'graphMain', chat: 'chatMain', pathEl: 'pathMain', inputEl: 'inputMain',
+    labels: baseLabels, convo: baseConvo, initial: 'lse',
+    graph: {
+      nodes: [
+        { id: 'root',      label: '📄 A논문',        fx: 0.45, fy: 0.02 },
+        { id: 'attention', label: 'attention',       fx: 0.12, fy: 0.27 },
+        { id: 'enc',       label: 'encoder-decoder', fx: 0.50, fy: 0.27 },
+        { id: 'pos',       label: 'positional enc.', fx: 0.90, fy: 0.27 },
+        { id: 'softmax',   label: 'softmax',         fx: 0.03, fy: 0.53 },
+        { id: 'multihead', label: 'multi-head',      fx: 0.30, fy: 0.53 },
+        { id: 'seq2seq',   label: 'seq2seq',         fx: 0.58, fy: 0.53 },
+        { id: 'lse',       label: 'log-sum-exp',     fx: 0.03, fy: 0.80 },
+        { id: 'rnn',       label: 'RNN 병목',        fx: 0.58, fy: 0.80 },
+      ],
+      edges: [
+        { from: 'root',      to: 'attention' },
+        { from: 'root',      to: 'enc' },
+        { from: 'root',      to: 'pos' },
+        { from: 'attention', to: 'softmax' },
+        { from: 'attention', to: 'multihead' },
+        { from: 'enc',       to: 'seq2seq' },
+        { from: 'softmax',   to: 'lse' },
+        { from: 'seq2seq',   to: 'rnn' },
+      ]
+    }
+  });
+
+  // ---- Slide 6: two separate trees + a fresh comparison node ----
+  // attention (A tree) and selective scan (B tree) were drag-selected together
+  // and injected with "루트까지 경로 포함", so both root paths light up;
+  // side branches (softmax, SSM 상태) stay out.
+  initGraph('graphNew', {
+    nodes: [
+      // A논문 (Transformer) tree
+      { id: 'rootA',     label: '📄 A논문 (Transformer)', fx: 0.03, fy: 0.03, state: 'path' },
+      { id: 'attention', label: 'attention',              fx: 0.08, fy: 0.30, state: 'path' },
+      { id: 'softmax',   label: 'softmax',                fx: 0.06, fy: 0.57, state: 'dim' },
+      // B논문 (Mamba) tree
+      { id: 'rootB',     label: '📄 B논문 (Mamba)',       fx: 0.90, fy: 0.03, state: 'path' },
+      { id: 'selscan',   label: 'selective scan',         fx: 0.85, fy: 0.30, state: 'path' },
+      { id: 'ssm',       label: 'SSM 상태',               fx: 0.90, fy: 0.57, state: 'dim' },
+      // Fresh comparison node (belongs to neither tree)
+      { id: 'newnode',   label: '＋ 개념 비교 📎×2',      fx: 0.45, fy: 0.80, state: 'new' },
+    ],
+    edges: [
+      { from: 'rootA',     to: 'attention', hl: true },
+      { from: 'attention', to: 'softmax' },
+      { from: 'rootB',     to: 'selscan',   hl: true },
+      { from: 'selscan',   to: 'ssm' },
+      { from: 'attention', to: 'newnode', dash: true },
+      { from: 'selscan',   to: 'newnode', dash: true },
+    ]
+  });
+
+  // ---- 비교 STEP 1: two finished trees + fresh empty node (interactive) ----
+  const compLabels = {
+    rootA: '📄 A논문', attention: 'attention', softmax: 'softmax',
+    rootB: '📄 B논문', selscan: 'selective scan', ssm: 'SSM 상태',
+  };
+  const compConvo = {
+    rootA: baseConvo.root, attention: baseConvo.attention, softmax: baseConvo.softmax,
+    rootB:   { q: 'B논문 설명해줘 📎', a: 'attention 없이 selective state space(SSM)로 시퀀스를 처리하는 Mamba를 제안합니다. 선형 시간으로 긴 문맥을 다룹니다.' },
+    selscan: { q: 'selective scan이 뭐야?', a: '입력 내용에 따라 상태공간 파라미터를 바꿔가며, 어떤 정보를 상태에 남길지 선택적으로 결정하는 메커니즘이에요.' },
+    ssm:     { q: 'SSM 상태에는 뭐가 담겨?', a: '지금까지 본 시퀀스를 고정 크기 벡터로 압축한 것입니다. 게이트가 열릴 때만 새 정보가 반영돼요.' },
+  };
+  setupMockup({
+    canvas: 'graphCmp1', chat: 'chatCmp1', pathEl: 'pathCmp1', inputEl: 'inputCmp1',
+    labels: compLabels, convo: compConvo, initial: 'selscan',
+    banner: '＋ 새 노드 <strong>"개념 비교"</strong> 생성됨 — 어느 트리에도 붙지 않은 독립 노드, 컨텍스트는 아직 비어 있음',
+    graph: {
+      nodes: [
+        { id: 'rootA',     label: '📄 A논문 (Transformer)', fx: 0.03, fy: 0.03 },
+        { id: 'attention', label: 'attention',              fx: 0.08, fy: 0.32 },
+        { id: 'softmax',   label: 'softmax',                fx: 0.06, fy: 0.61 },
+        { id: 'rootB',     label: '📄 B논문 (Mamba)',       fx: 0.90, fy: 0.03 },
+        { id: 'selscan',   label: 'selective scan',         fx: 0.85, fy: 0.32 },
+        { id: 'ssm',       label: 'SSM 상태',               fx: 0.90, fy: 0.61 },
+        { id: 'newnode',   label: '＋ 개념 비교 (빈 노드)', fx: 0.45, fy: 0.85, state: 'new', fixed: true },
+      ],
+      edges: [
+        { from: 'rootA',     to: 'attention' },
+        { from: 'attention', to: 'softmax' },
+        { from: 'rootB',     to: 'selscan' },
+        { from: 'selscan',   to: 'ssm' },
+      ]
+    }
+  });
+
+  // ---- 비교 STEP 2: dropped selection + choice dialog (static map) ----
+  initGraph('graphCmp2', {
+    nodes: [
+      { id: 'rootA',     label: '📄 A논문 (Transformer)', fx: 0.03, fy: 0.03, state: 'dim' },
+      { id: 'attention', label: 'attention',              fx: 0.08, fy: 0.32, state: 'path' },
+      { id: 'softmax',   label: 'softmax',                fx: 0.06, fy: 0.61, state: 'dim' },
+      { id: 'rootB',     label: '📄 B논문 (Mamba)',       fx: 0.90, fy: 0.03, state: 'dim' },
+      { id: 'selscan',   label: 'selective scan',         fx: 0.85, fy: 0.32, state: 'path' },
+      { id: 'ssm',       label: 'SSM 상태',               fx: 0.90, fy: 0.61, state: 'dim' },
+      { id: 'newnode',   label: '＋ 개념 비교 📎×2',      fx: 0.45, fy: 0.85, state: 'new' },
+    ],
+    edges: [
+      { from: 'rootA',     to: 'attention' },
+      { from: 'attention', to: 'softmax' },
+      { from: 'rootB',     to: 'selscan' },
+      { from: 'selscan',   to: 'ssm' },
+      { from: 'attention', to: 'newnode', dash: true },
+      { from: 'selscan',   to: 'newnode', dash: true },
+    ]
+  });
+
+  // ---- 삭제 STEP 1: original tree, attention marked as delete target ----
+  initGraph('graphDel0', {
+    nodes: [
+      { id: 'root',      label: '📄 A논문',        fx: 0.45, fy: 0.02 },
+      { id: 'attention', label: 'attention 🗑?',   fx: 0.12, fy: 0.27, state: 'target' },
+      { id: 'enc',       label: 'encoder-decoder', fx: 0.50, fy: 0.27 },
+      { id: 'pos',       label: 'positional enc.', fx: 0.90, fy: 0.27 },
+      { id: 'softmax',   label: 'softmax',         fx: 0.03, fy: 0.53 },
+      { id: 'multihead', label: 'multi-head',      fx: 0.30, fy: 0.53 },
+      { id: 'seq2seq',   label: 'seq2seq',         fx: 0.58, fy: 0.53 },
+      { id: 'lse',       label: 'log-sum-exp',     fx: 0.03, fy: 0.80 },
+      { id: 'rnn',       label: 'RNN 병목',        fx: 0.58, fy: 0.80 },
+    ],
+    edges: [
+      { from: 'root',      to: 'attention' },
+      { from: 'root',      to: 'enc' },
+      { from: 'root',      to: 'pos' },
+      { from: 'attention', to: 'softmax' },
+      { from: 'attention', to: 'multihead' },
+      { from: 'enc',       to: 'seq2seq' },
+      { from: 'softmax',   to: 'lse' },
+      { from: 'seq2seq',   to: 'rnn' },
+    ]
+  });
+
+  // ---- 리패런팅 STEP 1: before — positional enc. still under the root ----
+  setupMockup({
+    canvas: 'graphReA0', chat: 'chatReA0', pathEl: 'pathReA0', inputEl: 'inputReA0',
+    labels: baseLabels, convo: baseConvo, initial: 'pos',
+    banner: '지금 상태 — <strong>positional enc.</strong>는 A논문 직속. 경로에 encoder-decoder 맥락이 없다. 사용자가 이 노드를 집어 <strong>encoder-decoder 위로 드래그</strong>한다',
+    graph: {
+      nodes: [
+        { id: 'root',      label: '📄 A논문',        fx: 0.42, fy: 0.02 },
+        { id: 'attention', label: 'attention',       fx: 0.10, fy: 0.30 },
+        { id: 'enc',       label: 'encoder-decoder', fx: 0.50, fy: 0.30 },
+        { id: 'pos',       label: 'positional enc.', fx: 0.90, fy: 0.30 },
+        { id: 'softmax',   label: 'softmax',         fx: 0.03, fy: 0.58 },
+        { id: 'multihead', label: 'multi-head',      fx: 0.26, fy: 0.58 },
+        { id: 'seq2seq',   label: 'seq2seq',         fx: 0.55, fy: 0.58 },
+        { id: 'lse',       label: 'log-sum-exp',     fx: 0.03, fy: 0.84 },
+      ],
+      edges: [
+        { from: 'root',      to: 'attention' },
+        { from: 'root',      to: 'enc' },
+        { from: 'root',      to: 'pos' },
+        { from: 'attention', to: 'softmax' },
+        { from: 'attention', to: 'multihead' },
+        { from: 'enc',       to: 'seq2seq' },
+        { from: 'softmax',   to: 'lse' },
+      ]
+    }
+  });
+
+  // ---- 끼워넣기 STEP 1: before — scaled dot-product is a separate root branch ----
+  setupMockup({
+    canvas: 'graphReB0', chat: 'chatReB0', pathEl: 'pathReB0', inputEl: 'inputReB0',
+    labels: baseLabels, convo: baseConvo, initial: 'softmax',
+    banner: '지금 상태 — <strong>scaled dot-product</strong>는 A논문 직속의 별도 갈래. softmax 경로에 그 맥락이 빠져 있다. 사용자가 이 노드를 <strong>attention–softmax 엣지 위로 드래그</strong>한다',
+    graph: {
+      nodes: [
+        { id: 'root',      label: '📄 A논문',           fx: 0.42, fy: 0.02 },
+        { id: 'attention', label: 'attention',          fx: 0.08, fy: 0.28 },
+        { id: 'sdp',       label: 'scaled dot-product', fx: 0.44, fy: 0.28 },
+        { id: 'enc',       label: 'encoder-decoder',    fx: 0.85, fy: 0.28 },
+        { id: 'softmax',   label: 'softmax',            fx: 0.04, fy: 0.55 },
+        { id: 'multihead', label: 'multi-head',         fx: 0.28, fy: 0.55 },
+        { id: 'seq2seq',   label: 'seq2seq',            fx: 0.80, fy: 0.55 },
+        { id: 'lse',       label: 'log-sum-exp',        fx: 0.04, fy: 0.82 },
+      ],
+      edges: [
+        { from: 'root',      to: 'attention' },
+        { from: 'root',      to: 'sdp' },
+        { from: 'root',      to: 'enc' },
+        { from: 'attention', to: 'softmax' },
+        { from: 'attention', to: 'multihead' },
+        { from: 'enc',       to: 'seq2seq' },
+        { from: 'softmax',   to: 'lse' },
+      ]
+    }
+  });
+
+  // ---- 삭제 STEP 2: deletion result A — attention deleted with its whole subtree ----
+  // Ghost chips (fixed) are just visual remnants of what was removed; no edges remain.
+  setupMockup({
+    canvas: 'graphDelA', chat: 'chatDelA', pathEl: 'pathDelA', inputEl: 'inputDelA',
+    labels: baseLabels, convo: baseConvo, initial: 'seq2seq',
+    banner: '🗑 <strong>attention</strong>을 서브트리째 삭제 — softmax · multi-head · log-sum-exp까지 4개 노드가 함께 제거됨',
+    graph: {
+      nodes: [
+        { id: 'root',    label: '📄 A논문',        fx: 0.50, fy: 0.02 },
+        { id: 'enc',     label: 'encoder-decoder', fx: 0.42, fy: 0.28 },
+        { id: 'pos',     label: 'positional enc.', fx: 0.88, fy: 0.28 },
+        { id: 'seq2seq', label: 'seq2seq',         fx: 0.46, fy: 0.54 },
+        { id: 'rnn',     label: 'RNN 병목',        fx: 0.48, fy: 0.80 },
+        { id: 'g1', label: 'attention 🗑',   fx: 0.05, fy: 0.28, state: 'ghost', fixed: true },
+        { id: 'g2', label: 'softmax 🗑',     fx: 0.03, fy: 0.52, state: 'ghost', fixed: true },
+        { id: 'g3', label: 'multi-head 🗑',  fx: 0.05, fy: 0.76, state: 'ghost', fixed: true },
+        { id: 'g4', label: 'log-sum-exp 🗑', fx: 0.03, fy: 0.97, state: 'ghost', fixed: true },
+      ],
+      edges: [
+        { from: 'root',    to: 'enc' },
+        { from: 'root',    to: 'pos' },
+        { from: 'enc',     to: 'seq2seq' },
+        { from: 'seq2seq', to: 'rnn' },
+      ]
+    }
+  });
+
+  // ---- Slide 8: deletion case B — splice: children re-attached to the root ----
+  // softmax/multi-head paths get the deleted node's one-line summary stub.
+  const attStub = {
+    title: '📌 삭제된 attention의 요약 스텁',
+    text: '(요약) attention = 각 토큰이 다른 토큰을 얼마나 참조할지 가중치를 계산하는 메커니즘. Q·K·V와 softmax 정규화 사용.'
+  };
+  setupMockup({
+    canvas: 'graphDelB', chat: 'chatDelB', pathEl: 'pathDelB', inputEl: 'inputDelB',
+    labels: baseLabels, convo: baseConvo, initial: 'softmax',
+    banner: '✓ <strong>이어붙이기 + 요약 스텁 남기기</strong> 선택됨 — softmax · multi-head가 A논문 아래로 이동, attention의 한 줄 요약이 두 경로에 삽입됨',
+    stubs: { softmax: attStub, multihead: attStub },
+    graph: {
+      nodes: [
+        { id: 'root',      label: '📄 A논문',        fx: 0.45, fy: 0.02 },
+        { id: 'softmax',   label: 'softmax',         fx: 0.03, fy: 0.30 },
+        { id: 'multihead', label: 'multi-head',      fx: 0.33, fy: 0.30 },
+        { id: 'enc',       label: 'encoder-decoder', fx: 0.62, fy: 0.30 },
+        { id: 'pos',       label: 'positional enc.', fx: 0.95, fy: 0.30 },
+        { id: 'lse',       label: 'log-sum-exp',     fx: 0.03, fy: 0.58 },
+        { id: 'seq2seq',   label: 'seq2seq',         fx: 0.66, fy: 0.58 },
+        { id: 'ghost',     label: 'attention 🗑',    fx: 0.40, fy: 0.85, state: 'ghost', fixed: true },
+      ],
+      edges: [
+        { from: 'root',    to: 'softmax' },
+        { from: 'root',    to: 'multihead' },
+        { from: 'root',    to: 'enc' },
+        { from: 'root',    to: 'pos' },
+        { from: 'softmax', to: 'lse' },
+        { from: 'enc',     to: 'seq2seq' },
+      ]
+    }
+  });
+
+  // ---- Slide 9: restructuring case A — positional enc. reparented under enc ----
+  setupMockup({
+    canvas: 'graphReA', chat: 'chatReA', pathEl: 'pathReA', inputEl: 'inputReA',
+    labels: baseLabels, convo: baseConvo, initial: 'pos',
+    banner: '↪ <strong>positional enc.</strong>를 드래그해 encoder-decoder 위에 드롭 — 루트 직속에서 <strong>encoder-decoder의 자식</strong>으로 이동됨',
+    graph: {
+      nodes: [
+        { id: 'root',      label: '📄 A논문',        fx: 0.40, fy: 0.02 },
+        { id: 'attention', label: 'attention',       fx: 0.10, fy: 0.30 },
+        { id: 'enc',       label: 'encoder-decoder', fx: 0.55, fy: 0.30 },
+        { id: 'softmax',   label: 'softmax',         fx: 0.02, fy: 0.58 },
+        { id: 'multihead', label: 'multi-head',      fx: 0.24, fy: 0.58 },
+        { id: 'seq2seq',   label: 'seq2seq',         fx: 0.52, fy: 0.58 },
+        { id: 'pos',       label: 'positional enc.', fx: 0.85, fy: 0.58 },
+        { id: 'lse',       label: 'log-sum-exp',     fx: 0.02, fy: 0.84 },
+        { id: 'oldpos',    label: 'positional enc. (이전)', fx: 0.92, fy: 0.02, state: 'old', fixed: true },
+      ],
+      edges: [
+        { from: 'root',      to: 'attention' },
+        { from: 'root',      to: 'enc' },
+        { from: 'attention', to: 'softmax' },
+        { from: 'attention', to: 'multihead' },
+        { from: 'enc',       to: 'seq2seq' },
+        { from: 'enc',       to: 'pos' },
+        { from: 'softmax',   to: 'lse' },
+        { from: 'root',      to: 'oldpos', old: true },
+        { from: 'oldpos',    to: 'pos', move: true },
+      ]
+    }
+  });
+
+  // ---- Slide 10: restructuring case B — scaled dot-product inserted between ----
+  // attention and softmax (edge drop); softmax/lse paths now include it.
+  setupMockup({
+    canvas: 'graphReB', chat: 'chatReB', pathEl: 'pathReB', inputEl: 'inputReB',
+    labels: baseLabels, convo: baseConvo, initial: 'softmax',
+    banner: '🔀 <strong>scaled dot-product</strong>를 attention–softmax <strong>엣지 위에 드롭</strong> — 두 노드 사이에 끼워넣어져 softmax 이하의 경로가 재구성됨',
+    graph: {
+      nodes: [
+        { id: 'root',      label: '📄 A논문',           fx: 0.42, fy: 0.02 },
+        { id: 'attention', label: 'attention',          fx: 0.14, fy: 0.26 },
+        { id: 'enc',       label: 'encoder-decoder',    fx: 0.66, fy: 0.26 },
+        { id: 'sdp',       label: 'scaled dot-product', fx: 0.05, fy: 0.50 },
+        { id: 'multihead', label: 'multi-head',         fx: 0.42, fy: 0.50 },
+        { id: 'seq2seq',   label: 'seq2seq',            fx: 0.72, fy: 0.50 },
+        { id: 'softmax',   label: 'softmax',            fx: 0.08, fy: 0.74 },
+        { id: 'lse',       label: 'log-sum-exp',        fx: 0.06, fy: 0.97 },
+        { id: 'oldsdp',    label: 'scaled dot-product (이전)', fx: 0.88, fy: 0.90, state: 'old', fixed: true },
+      ],
+      edges: [
+        { from: 'root',      to: 'attention' },
+        { from: 'root',      to: 'enc' },
+        { from: 'attention', to: 'sdp' },
+        { from: 'attention', to: 'multihead' },
+        { from: 'enc',       to: 'seq2seq' },
+        { from: 'sdp',       to: 'softmax' },
+        { from: 'softmax',   to: 'lse' },
+        { from: 'root',      to: 'oldsdp', old: true },
+        { from: 'oldsdp',    to: 'sdp', move: true },
+      ]
+    }
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>
